@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# /opt/shardkeep/bin/run-update.sh
+#
+# Tightly-scoped root helper. The ONLY script the node's `shardkeep*` sudoers
+# grants NOPASSWD, so it is the master→node privileged rail. Every action here
+# only ever `curl|bash`es from https://master.shardkeep.io — the same canonical
+# origin migrate.sh already trusts. No local role state is ever destroyed:
+# retiring a role is NOT a verb here (that stays a deliberate, out-of-band act).
+#
+#   run-update.sh                       → agent self-update (pinned migrate.sh)   [default]
+#   run-update.sh update                → same as default
+#   run-update.sh install-role <role>   → (re)install ONE role from its pinned installer
+#
+# install-role is NON-DESTRUCTIVE: the per-role installers never stop, disable
+# or delete a sibling role, so a stolen master key can use this only to
+# (re)install a role from canonical source — never as a fleet role-kill switch.
+set -euo pipefail
+
+BASE="https://master.shardkeep.io/shardkeep/operator"
+cmd="${1:-update}"
+
+case "$cmd" in
+    update)
+        exec curl -sSfL "$BASE/agent/migrate.sh" | bash
+        ;;
+    install-role)
+        role="${2:-}"
+        case "$role" in
+            warden|bastion|sentry) ;;
+            *) echo "run-update.sh install-role: invalid role '${role:-<empty>}' (want warden|bastion|sentry)" >&2; exit 2 ;;
+        esac
+        exec curl -sSfL "$BASE/$role/install.sh" | bash
+        ;;
+    *)
+        echo "run-update.sh: unknown command '$cmd' (want: update | install-role <role>)" >&2
+        exit 2
+        ;;
+esac
