@@ -3,7 +3,7 @@
 #
 # Tightly-scoped root helper. The ONLY script the node's `shardkeep*` sudoers
 # grants NOPASSWD, so it is the master→node privileged rail. Every action here
-# only ever `curl|bash`es from https://master.shardkeep.io — the same canonical
+# only ever `curl|bash`es from the ShardKeep/shardkeep-dist GitHub repo — the same canonical
 # origin migrate.sh already trusts. No local role state is ever destroyed:
 # retiring a role is NOT a verb here (that stays a deliberate, out-of-band act).
 #
@@ -16,7 +16,7 @@
 # (re)install a role from canonical source — never as a fleet role-kill switch.
 set -euo pipefail
 
-BASE="https://master.shardkeep.io/shardkeep/operator"
+BASE="https://raw.githubusercontent.com/ShardKeep/shardkeep-dist/main"
 cmd="${1:-update}"
 
 case "$cmd" in

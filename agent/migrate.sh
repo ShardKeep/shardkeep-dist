@@ -16,7 +16,7 @@
 # legacy detection chain.
 #
 # Run on each node via:
-#   curl -sSL https://master.shardkeep.io/shardkeep/operator/agent/migrate.sh | sudo bash
+#   curl -sSL https://raw.githubusercontent.com/ShardKeep/shardkeep-dist/main/agent/migrate.sh | sudo bash
 #
 # Optional: pass role + network for fresh installs:
 #   ... | sudo bash -s bastion devnet
@@ -25,7 +25,7 @@
 # ═══════════════════════════════════════════════════════════════════
 set -euo pipefail
 
-AGENT_URL_BASE="https://master.shardkeep.io/shardkeep/operator/agent"
+AGENT_URL_BASE="https://raw.githubusercontent.com/ShardKeep/shardkeep-dist/main/agent"
 AGENT_URL="$AGENT_URL_BASE/agent.py"
 RUN_UPDATE_URL="$AGENT_URL_BASE/run-update.sh"
 MASTER_KEY_URL="$AGENT_URL_BASE/master-key.pub"
@@ -157,4 +157,4 @@ fi
 # carries a role-matched identity forward, and refreshes run-update.sh. It never
 # touches a sibling role.
 echo "[3/3] Delegating to the $NODE_TYPE per-role installer..."
-curl -sSfL "https://master.shardkeep.io/shardkeep/operator/${NODE_TYPE}/install.sh" | bash -s "$NETWORK"
+curl -sSfL "https://raw.githubusercontent.com/ShardKeep/shardkeep-dist/main/${NODE_TYPE}/install.sh" | bash -s "$NETWORK"

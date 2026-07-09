@@ -18,7 +18,7 @@
 # out-of-band action — this installer only ever creates/replaces its OWN role.
 #
 # One-liner:
-#   curl -sSL https://master.shardkeep.io/shardkeep/operator/warden/install.sh | sudo bash
+#   curl -sSL https://raw.githubusercontent.com/ShardKeep/shardkeep-dist/main/warden/install.sh | sudo bash
 #
 # Optional network override (defaults to devnet):
 #   ... | sudo bash -s mainnet
@@ -31,9 +31,9 @@ ROLE_LABEL="Warden"
 NETWORK="${1:-devnet}"
 case "$NETWORK" in testnet|devnet|mainnet) ;; *) NETWORK="devnet" ;; esac
 
-AGENT_URL="https://master.shardkeep.io/shardkeep/operator/agent/agent.py"
-RUN_UPDATE_URL="https://master.shardkeep.io/shardkeep/operator/agent/run-update.sh"
-MASTER_KEY_URL="https://master.shardkeep.io/shardkeep/operator/agent/master-key.pub"
+AGENT_URL="https://raw.githubusercontent.com/ShardKeep/shardkeep-dist/main/agent/agent.py"
+RUN_UPDATE_URL="https://raw.githubusercontent.com/ShardKeep/shardkeep-dist/main/agent/run-update.sh"
+MASTER_KEY_URL="https://raw.githubusercontent.com/ShardKeep/shardkeep-dist/main/agent/master-key.pub"
 AGGREGATOR_URL="https://master.shardkeep.io/shardkeep/operator/api/heartbeat.php"
 WS_URL="wss://master.shardkeep.io/shardkeep/operator/ws"
 
