@@ -16,7 +16,7 @@ Usage:
 
 from __future__ import annotations  # PEP 563: lazy annotations (Python 3.7+ compat)
 
-AGENT_VERSION = "0.6.2"
+AGENT_VERSION = "0.6.3"
 
 # Role identity — populated in main() once args.type is known. Defaults match
 # the legacy 'sentry' shape so module-level imports (e.g. tests) don't crash
@@ -445,6 +445,50 @@ def handle_commands(commands):
                 'status': 'applied' if applied else 'noop',
                 'keys': list(updates.keys()),
             })
+        elif cmd_type == 'install_cert':
+            # Backend-issued TLS cert (heartbeat-delivered). Pipe the fullchain to
+            # the pinned root helper, which validates it matches our local key,
+            # installs it, and reloads apache. Agent stays unprivileged; the only
+            # new privilege is `sudo /opt/shardkeep/bin/sk-cert-install` (no args).
+            fullchain = cmd.get('fullchain', '') or ''
+            if 'BEGIN CERTIFICATE' not in fullchain:
+                results.append({'type': 'install_cert', 'status': 'failed', 'error': 'no certificate in payload'})
+                logger.warning("install_cert: payload had no certificate")
+            else:
+                try:
+                    r = subprocess.run(
+                        ['sudo', '/opt/shardkeep/bin/sk-cert-install'],
+                        input=fullchain, text=True, capture_output=True, timeout=30,
+                    )
+                    if r.returncode == 0:
+                        results.append({'type': 'install_cert', 'status': 'installed'})
+                        logger.info("install_cert: TLS cert installed + apache reloaded")
+                    else:
+                        err = (r.stderr or r.stdout or 'helper failed').strip()[:200]
+                        results.append({'type': 'install_cert', 'status': 'failed', 'error': err})
+                        logger.error("install_cert helper failed: %s", err)
+                except Exception as e:
+                    results.append({'type': 'install_cert', 'status': 'failed', 'error': str(e)[:200]})
+                    logger.error("install_cert error: %s", e)
+        elif cmd_type == 'provision_web':
+            # Second warden lifecycle (separate from the agent): stand up / refresh
+            # the WEB-serving stack via the pinned root rail. Non-destructive.
+            logger.info("provision_web command received — running install-web via run-update.sh")
+            try:
+                r = subprocess.run(
+                    ['sudo', '/opt/shardkeep/bin/run-update.sh', 'install-web'],
+                    capture_output=True, text=True, timeout=1200,
+                )
+                if r.returncode == 0:
+                    results.append({'type': 'provision_web', 'status': 'ok'})
+                    logger.info("provision_web: web-serving stack provisioned/refreshed")
+                else:
+                    err = (r.stderr or r.stdout or 'install-web failed').strip()[-300:]
+                    results.append({'type': 'provision_web', 'status': 'failed', 'error': err})
+                    logger.error("provision_web failed: %s", err)
+            except Exception as e:
+                results.append({'type': 'provision_web', 'status': 'failed', 'error': str(e)[:200]})
+                logger.error("provision_web error: %s", e)
         else:
             results.append({
                 'type': cmd_type,
@@ -689,6 +733,19 @@ def send_heartbeat(aggregator_url, node_id, node_type, network, system_info, api
     _cch = load_claim_code_hash()
     if _cch:
         payload["claim_code_hash"] = _cch
+
+    # Warden TLS: include our CSR so the backend can (re)issue the node's cert and
+    # deliver it back via an install_cert command. The installer writes this file
+    # ONLY on nodes provisioned for heartbeat-delivered certs (wardens), so this is
+    # a no-op everywhere else. The CSR is public; the private key never leaves here.
+    try:
+        _csr_path = Path('/etc/shardkeep/tls/node.csr')
+        if _csr_path.is_file() and _csr_path.stat().st_size < 8000:
+            _csr = _csr_path.read_text()
+            if 'CERTIFICATE REQUEST' in _csr:
+                payload["tls_csr"] = _csr
+    except Exception:
+        pass
 
     if command_results:
         payload["command_results"] = command_results

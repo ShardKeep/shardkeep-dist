@@ -10,6 +10,7 @@
 #   run-update.sh                       → agent self-update (pinned migrate.sh)   [default]
 #   run-update.sh update                → same as default
 #   run-update.sh install-role <role>   → (re)install ONE role from its pinned installer
+#   run-update.sh install-web           → (re)provision the Warden WEB-serving stack (separate from the agent)
 #
 # install-role is NON-DESTRUCTIVE: the per-role installers never stop, disable
 # or delete a sibling role, so a stolen master key can use this only to
@@ -30,6 +31,12 @@ case "$cmd" in
             *) echo "run-update.sh install-role: invalid role '${role:-<empty>}' (want warden|bastion|sentry)" >&2; exit 2 ;;
         esac
         exec curl -sSfL "$BASE/$role/install.sh" | bash
+        ;;
+    install-web)
+        # (re)provision the Warden WEB-serving stack (apache :443 + container + WSS +
+        # TLS), a SEPARATE lifecycle from the agent. Non-destructive: only installs /
+        # refreshes; never stops or deletes a sibling role. Canonical origin only.
+        exec curl -sSfL "$BASE/warden/install-web.sh" | bash
         ;;
     *)
         echo "run-update.sh: unknown command '$cmd' (want: update | install-role <role>)" >&2
